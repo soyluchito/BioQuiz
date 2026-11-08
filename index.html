@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BioQuiz — Genética y Biología Celular</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Design tokens ──────────────────────────────────────── */
+    :root {
+      --bg-deep:        #010f1e;
+      --bg-mid:         #001e3c;
+      --bg-surface:     rgba(0, 30, 60, 0.6);
+      --glass-bg:       rgba(255, 255, 255, 0.04);
+      --glass-border:   rgba(0, 255, 65, 0.15);
+      --glass-hover:    rgba(0, 255, 65, 0.07);
+
+      --clr-primary:    #00e676;   /* bioluminescent green */
+      --clr-primary-dim:#00703a;
+      --clr-secondary:  #40c4ff;   /* deep-sea blue */
+      --clr-accent:     #ff6b9d;   /* cell-pink */
+      --clr-warn:       #ff5252;
+      --clr-correct:    #00e676;
+      --clr-wrong:      #ff5252;
+
+      --text-high:      #e8f5f1;
+      --text-mid:       #9ec4b4;
+      --text-low:       #5a8075;
+
+      --radius-card:    16px;
+      --radius-btn:     12px;
+      --shadow-glow:    0 0 32px rgba(0, 230, 118, 0.12);
+      --shadow-card:    0 8px 32px rgba(0, 0, 0, 0.5);
+
+      --font-head:      'Space Grotesk', sans-serif;
+      --font-body:      'DM Sans', sans-serif;
+
+      --transition:     220ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── Reset & Base ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-deep);
+      color: var(--text-high);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* ── Animated background ────────────────────────────────── */
+    .bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .bg-canvas::before {
+      content: '';
+      position: absolute;
+      width: 700px; height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,230,118,0.08) 0%, transparent 70%);
+      top: -200px; left: -200px;
+      animation: pulse-orb 8s ease-in-out infinite alternate;
+    }
+
+    .bg-canvas::after {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(64,196,255,0.07) 0%, transparent 70%);
+      bottom: -150px; right: -100px;
+      animation: pulse-orb 10s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes pulse-orb {
+      from { transform: scale(1) translate(0,0); opacity: 0.6; }
+      to   { transform: scale(1.2) translate(30px, 20px); opacity: 1; }
+    }
+
+    /* ── Layout wrapper ─────────────────────────────────────── */
+    .app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 4rem;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+      max-width: 680px;
+      width: 100%;
+    }
+
+    .header__eyebrow {
+      font-family: var(--font-head);
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      color: var(--clr-primary);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .header__title {
+      font-family: var(--font-head);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--text-high);
+      margin-bottom: 0.75rem;
+    }
+
+    .header__title span {
+      color: var(--clr-primary);
+    }
+
+    .header__sub {
+      font-size: 1rem;
+      color: var(--text-mid);
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    /* ── Progress bar ───────────────────────────────────────── */
+    .progress-wrap {
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 1.5rem;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-head);
+      font-size: 0.8rem;
+      color: var(--text-mid);
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--clr-primary), var(--clr-secondary));
+      border-radius: 999px;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 0%;
+    }
+
+    /* ── Question card ──────────────────────────────────────── */
+    .quiz-container {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .question-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-card);
+      padding: 2rem 2rem 1.5rem;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: var(--shadow-card), var(--shadow-glow);
+      animation: card-in 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .question-label {
+      font-family: var(--font-head);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: var(--clr-primary);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .question-text {
+      font-family: var(--font-head);
+      font-size: 1.2rem;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--text-high);
+      margin-bottom: 1.75rem;
+    }
+
+    /* ── Options ────────────────────────────────────────────── */
+    .options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      list-style: none;
+    }
+
+    .option-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      width: 100%;
+      padding: 0.9rem 1.1rem;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: var(--radius-btn);
+      color: var(--text-mid);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        background var(--transition),
+        border-color var(--transition),
+        color var(--transition),
+        transform var(--transition);
+    }
+
+    .option-btn:hover:not(:disabled) {
+      background: var(--glass-hover);
+      border-color: rgba(0, 230, 118, 0.3);
+      color: var(--text-high);
+      transform: translateX(4px);
+    }
+
+    .option-btn:focus-visible {
+      outline: 2px solid var(--clr-primary);
+      outline-offset: 2px;
+    }
+
+    .option-key {
+      flex-shrink: 0;
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-head);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-low);
+      text-transform: uppercase;
+      transition: background var(--transition), border-color var(--transition), color var(--transition);
+    }
+
+    /* Correct / wrong states */
+    .option-btn.correct {
+      background: rgba(0, 230, 118, 0.1);
+      border-color: var(--clr-correct);
+      color: var(--clr-correct);
+    }
+    .option-btn.correct .option-key {
+      background: var(--clr-correct);
+      border-color: var(--clr-correct);
+      color: #001e3c;
+    }
+
+    .option-btn.wrong {
+      background: rgba(255, 82, 82, 0.08);
+      border-color: var(--clr-wrong);
+      color: var(--clr-wrong);
+    }
+    .option-btn.wrong .option-key {
+      background: var(--clr-wrong);
+      border-color: var(--clr-wrong);
+      color: #fff;
+    }
+
+    .option-btn:disabled { cursor: default; transform: none; }
+
+    /* ── Feedback bar ───────────────────────────────────────── */
+    .feedback {
+      margin-top: 1.25rem;
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      display: none;
+      animation: fade-in 0.2s ease both;
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .feedback.show { display: block; }
+
+    .feedback.correct-fb {
+      background: rgba(0, 230, 118, 0.08);
+      border: 1px solid rgba(0, 230, 118, 0.2);
+      color: var(--clr-correct);
+    }
+
+    .feedback.wrong-fb {
+      background: rgba(255, 82, 82, 0.07);
+      border: 1px solid rgba(255, 82, 82, 0.2);
+      color: #ff8a80;
+    }
+
+    .feedback-icon { font-weight: 700; margin-right: 0.4em; }
+
+    /* ── Card footer ────────────────────────────────────────── */
+    .card-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+
+    .btn-next {
+      font-family: var(--font-head);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.7rem 1.5rem;
+      background: var(--clr-primary);
+      color: #001e3c;
+      border: none;
+      border-radius: var(--radius-btn);
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition), opacity var(--transition);
+      display: none;
+    }
+
+    .btn-next.visible { display: flex; align-items: center; gap: 0.4em; }
+
+    .btn-next:hover { background: #69f0ae; transform: translateY(-1px); }
+    .btn-next:active { transform: translateY(0); }
+    .btn-next:focus-visible { outline: 2px solid var(--clr-primary); outline-offset: 3px; }
+
+    /* ── Results screen ─────────────────────────────────────── */
+    .results-screen {
+      display: none;
+      text-align: center;
+      animation: card-in 0.4s ease both;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .results-screen.show { display: block; }
+
+    .results-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-card);
+      padding: 3rem 2rem;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: var(--shadow-card), var(--shadow-glow);
+    }
+
+    .results-emoji {
+      font-size: 3.5rem;
+      margin-bottom: 1.25rem;
+      display: block;
+      line-height: 1;
+    }
+
+    .results-title {
+      font-family: var(--font-head);
+      font-size: 1.9rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-high);
+    }
+
+    .results-subtitle {
+      color: var(--text-mid);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+
+    .score-ring-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+
+    .score-ring {
+      position: relative;
+      width: 140px; height: 140px;
+    }
+
+    .score-ring svg { transform: rotate(-90deg); }
+
+    .score-ring__track {
+      fill: none;
+      stroke: rgba(255,255,255,0.06);
+      stroke-width: 8;
+    }
+
+    .score-ring__fill {
+      fill: none;
+      stroke: url(#ring-gradient);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 377;
+      stroke-dashoffset: 377;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .score-ring__label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-ring__number {
+      font-family: var(--font-head);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-high);
+      line-height: 1;
+    }
+
+    .score-ring__total {
+      font-size: 0.75rem;
+      color: var(--text-mid);
+    }
+
+    .results-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .stat-box__val {
+      font-family: var(--font-head);
+      font-size: 1.6rem;
+      font-weight: 700;
+      display: block;
+    }
+
+    .stat-box__val.green { color: var(--clr-correct); }
+    .stat-box__val.red   { color: var(--clr-wrong); }
+
+    .stat-box__label {
+      font-size: 0.8rem;
+      color: var(--text-mid);
+    }
+
+    .grade-badge {
+      display: inline-block;
+      padding: 0.35rem 1.1rem;
+      border-radius: 999px;
+      font-family: var(--font-head);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+
+    .grade-badge.A { background: rgba(0,230,118,0.15); color: var(--clr-correct); border: 1px solid rgba(0,230,118,0.3); }
+    .grade-badge.B { background: rgba(64,196,255,0.12); color: var(--clr-secondary); border: 1px solid rgba(64,196,255,0.3); }
+    .grade-badge.C { background: rgba(255,193,7,0.12); color: #ffd740; border: 1px solid rgba(255,193,7,0.3); }
+    .grade-badge.D { background: rgba(255,82,82,0.1); color: var(--clr-wrong); border: 1px solid rgba(255,82,82,0.25); }
+
+    .btn-restart {
+      font-family: var(--font-head);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.85rem 2rem;
+      background: var(--clr-primary);
+      color: #001e3c;
+      border: none;
+      border-radius: var(--radius-btn);
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+    }
+
+    .btn-restart:hover { background: #69f0ae; transform: translateY(-2px); }
+    .btn-restart:focus-visible { outline: 2px solid var(--clr-primary); outline-offset: 3px; }
+
+    /* ── Reduced motion ─────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+
+    /* ── Mobile tweaks ──────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .question-card { padding: 1.5rem 1.25rem 1.25rem; }
+      .question-text { font-size: 1.05rem; }
+      .results-stats { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-canvas" aria-hidden="true"></div>
+
+<main class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <p class="header__eyebrow">Cuestionario interactivo</p>
+    <h1 class="header__title">Biología &amp; <span>Genética</span></h1>
+    <p class="header__sub">30 preguntas sobre ADN, células, genética molecular y biología fundamental. Por Ignacio salsamendi, Benjamin Tricotti, Tiziano Zanetti, Mateo sobrado</p>
+  </header>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-meta">
+      <span id="progress-label">Pregunta 1 de 30</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="30" aria-valuenow="0" aria-label="Progreso del cuestionario">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- Quiz -->
+  <section class="quiz-container" id="quiz-container" aria-live="polite">
+
+    <article class="question-card" id="question-card">
+      <p class="question-label" id="q-label">Pregunta 1</p>
+      <h2 class="question-text" id="q-text"></h2>
+      <ul class="options-list" id="options-list" role="list"></ul>
+      <div class="feedback" id="feedback" role="alert"></div>
+      <div class="card-footer">
+        <button class="btn-next" id="btn-next" aria-label="Siguiente pregunta">
+          Siguiente <span aria-hidden="true">→</span>
+        </button>
+      </div>
+    </article>
+
+  </section>
+
+  <!-- Results -->
+  <section class="results-screen" id="results-screen" aria-label="Resultados finales">
+    <div class="results-card">
+      <span class="results-emoji" id="results-emoji" aria-hidden="true"></span>
+      <h2 class="results-title" id="results-title"></h2>
+      <p class="results-subtitle" id="results-subtitle"></p>
+
+      <div class="score-ring-wrap">
+        <div class="score-ring" role="img" aria-label="Puntuación visual">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <defs>
+              <linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#00e676"/>
+                <stop offset="100%" stop-color="#40c4ff"/>
+              </linearGradient>
+            </defs>
+            <circle class="score-ring__track" cx="70" cy="70" r="60"/>
+            <circle class="score-ring__fill" id="ring-fill" cx="70" cy="70" r="60"/>
+          </svg>
+          <div class="score-ring__label">
+            <span class="score-ring__number" id="ring-number">0</span>
+            <span class="score-ring__total" id="ring-total">/ 30</span>
+          </div>
+        </div>
+      </div>
+
+      <span class="grade-badge" id="grade-badge"></span>
+
+      <div class="results-stats">
+        <div class="stat-box">
+          <span class="stat-box__val green" id="stat-correct">0</span>
+          <span class="stat-box__label">Correctas</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-box__val red" id="stat-wrong">0</span>
+          <span class="stat-box__label">Incorrectas</span>
+        </div>
+      </div>
+
+      <button class="btn-restart" id="btn-restart">Reintentar cuestionario</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  /* ── Question bank ──────────────────────────────────────── */
+  const QUESTIONS = [
+    {
+      q: "¿Qué es el ADN?",
+      opts: [
+        "Una proteína encargada del transporte de oxígeno.",
+        "La molécula que contiene la información genética de los seres vivos (ácido desoxirribonucleico).",
+        "Un tipo de lípido presente en la membrana celular."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué es el ARN?",
+      opts: [
+        "Ácido ribonucleico, encargado de participar en la síntesis de proteínas a partir de las instrucciones del ADN.",
+        "El organelo donde se produce la fotosíntesis.",
+        "La estructura que forma la pared celular vegetal."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es un cromosoma?",
+      opts: [
+        "Una enzima que degrada nutrientes en el estómago.",
+        "Una estructura organizada de ADN y proteínas ubicada en el núcleo celular.",
+        "El fluido interno dentro de la mitocondria."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué es el fenotipo?",
+      opts: [
+        "Las características físicas y observables de un individuo resultantes de la interacción de sus genes con el ambiente.",
+        "El conjunto de genes que un organismo hereda pero no se expresan.",
+        "El número total de células de un tejido."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es el genotipo?",
+      opts: [
+        "La apariencia externa de un organismo.",
+        "La combinación o conjunto de genes que posee un individuo en su ADN.",
+        "La secuencia de lípidos de la membrana."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué son los cromosomas homólogos?",
+      opts: [
+        "Un par de cromosomas (uno del padre y uno de la madre) que tienen la misma estructura y contienen genes para los mismos caracteres.",
+        "Cromosomas que pertenecen a especies totalmente diferentes.",
+        "Los fragmentos de ADN que han sufrido mutaciones irreversibles."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es la guanina?",
+      opts: [
+        "Un tipo de carbohidrato simple.",
+        "Una base nitrogenada púrica que forma parte del ADN y el ARN (se empareja con la citosina).",
+        "Una hormona del sistema endocrino."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué es la citosina?",
+      opts: [
+        "Una base nitrogenada pirimidínica que se une a la guanina en los ácidos nucleicos.",
+        "Un componente químico exclusivo de los virus.",
+        "La fuente de energía celular directa."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es una célula?",
+      opts: [
+        "El órgano principal del aparato digestivo.",
+        "La unidad anatómica, funcional y de origen de todos los seres vivos.",
+        "Una molécula inorgánica presente en el agua."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿En qué se diferencia una célula eucariota y procariota?",
+      opts: [
+        "La eucariota tiene núcleo definido y organelos delimitados por membranas, mientras que la procariota no tiene núcleo delimitado.",
+        "La procariota es siempre pluricelular y la eucariota es unicelular.",
+        "La procariota no posee ADN."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es el metabolismo?",
+      opts: [
+        "El proceso de división celular por mitosis.",
+        "El conjunto de reacciones químicas que ocurren en las células para mantener la vida (obtener energía y sintetizar materia).",
+        "El movimiento de los músculos involuntarios."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué son los fosfolípidos?",
+      opts: [
+        "Lípidos principales que componen la estructura de la membrana celular (forman la bicapa fosfolipídica).",
+        "Proteínas que aceleran las reacciones químicas en la sangre.",
+        "Azúcares complejos que almacenan reserva energética en plantas."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es la teoría de la panspermia?",
+      opts: [
+        "La idea de que la vida surgió espontáneamente del barro o materia inerte.",
+        "La hipótesis de que la vida en la Tierra proviene del espacio exterior, a través de meteoritos o cometas.",
+        "La teoría del origen de la vida por evolución química en el océano primitivo."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué es un nucleótido?",
+      opts: [
+        "La unidad básica (monómero) que compone los ácidos nucleicos (ADN y ARN), formado por azúcar, base nitrogenada y fosfato.",
+        "Un tipo de orgánulo encargado de empaquetar proteínas.",
+        "Un enlace químico entre dos aminoácidos."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué significa CHONPS?",
+      opts: [
+        "Un grupo de bacterias extremófilas.",
+        "Los bioelementos primarios más abundantes en los seres vivos (Carbono, Hidrógeno, Oxígeno, Nitrógeno, Fósforo y Azufre).",
+        "Las fases de la división mitótica."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué es el reino Fungi y el reino Animalia?",
+      opts: [
+        "Fungi abarca organismos heterótrofos descomponedores como hongos; Animalia abarca organismos pluricelulares heterótrofos con movilidad activa.",
+        "Fungi abarca plantas con flores; Animalia abarca solo bacterias fotosintéticas.",
+        "Fungi son microorganismos unicelulares fotosintéticos; Animalia son virus y priones."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Cuál es la función principal del ADN?",
+      opts: [
+        "Sintetizar directamente lípidos en el citoplasma.",
+        "Almacenar, conservar y transmitir la información genética necesaria para el desarrollo y funcionamiento del organismo.",
+        "Destruir toxinas que entran a la célula."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué bases nitrogenadas tiene el ARN?",
+      opts: [
+        "Adenina (A), Uracilo (U), Citosina (C) y Guanina (G).",
+        "Adenina (A), Timina (T), Citosina (C) y Guanina (G).",
+        "Uracilo (U), Timina (T), Citosina (C) y Guanina (G)."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué estructura fabrica proteínas?",
+      opts: [
+        "Los lisosomas.",
+        "Los ribosomas.",
+        "Las vacuolas."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué es una mutación genética?",
+      opts: [
+        "Una alteración o cambio permanente en la secuencia de nucleótidos del ADN de un organismo.",
+        "El proceso normal de replicación exacta de un cromosoma.",
+        "La degradación diaria de proteínas inservibles."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es un alelo?",
+      opts: [
+        "Una proteína estructural del citoesqueleto.",
+        "Cada una de las formas o variantes alternativas que puede tener un mismo gen.",
+        "Una falla en la membrana celular durante la mitosis."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué significa ADN?",
+      opts: [
+        "Ácido Desoxirribonucleico.",
+        "Ácido Duplicado Nuclear.",
+        "Adenosina Dinucleótida."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué significa ARN?",
+      opts: [
+        "Ácido Recombinante Nuclear.",
+        "Ácido Ribonucleico.",
+        "Aminoácido Ribosómico Natural."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué es la replicación del ADN?",
+      opts: [
+        "El proceso celular mediante el cual se sintetiza una copia idéntica de la molécula de ADN.",
+        "La conversión directa de ADN a aminoácidos.",
+        "La eliminación de secuencias viejas de ADN por el lisosoma."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es un gen?",
+      opts: [
+        "Una proteína entera lista para ser secretada.",
+        "Un segmento de ADN que contiene la información requerida para codificar un carácter o proteína específica.",
+        "El núcleo rodeado por su membrana nuclear."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué es una enzima?",
+      opts: [
+        "Una proteína que actúa como catalizador biológico, acelerando la velocidad de las reacciones químicas.",
+        "Un fragmento de lípido no soluble en agua.",
+        "Un tipo de carbohidrato estructural de las bacterias."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es un individuo homocigoto y heterocigoto?",
+      opts: [
+        "Homocigoto posee dos alelos iguales para un gen (AA o aa); Heterocigoto posee dos alelos diferentes para un gen (Aa).",
+        "Homocigoto es aquel con reproducción asexual; Heterocigoto se reproduce sexualmente.",
+        "Homocigoto posee ADN incompleto; Heterocigoto tiene cromosomas extra."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es un alelo dominante y recesivo?",
+      opts: [
+        "Dominante se expresa aun cuando esté en una sola copia (Aa); Recesivo solo se expresa si está en doble copia (aa).",
+        "Dominante solo aparece en plantas; Recesivo solo en animales.",
+        "Dominante causa mutaciones; Recesivo las repara."
+      ],
+      ans: 0
+    },
+    {
+      q: "¿Qué es un proceso?",
+      opts: [
+        "Un tipo específico de gen en la cadena de ADN.",
+        "Una secuencia ordenada de pasos, etapas o reacciones químicas que llevan a un resultado determinado.",
+        "La membrana que envuelve a la célula vegetal."
+      ],
+      ans: 1
+    },
+    {
+      q: "¿Qué es un cariotipo?",
+      opts: [
+        "El conjunto, mapa u ordenamiento del juego completo de cromosomas de una célula o especie según forma y tamaño.",
+        "El número total de células en la etapa embrionaria.",
+        "El tipo de ARN presente dentro del ribosoma."
+      ],
+      ans: 0
+    }
+  ];
+
+  const KEYS = ['a', 'b', 'c'];
+  const TOTAL = QUESTIONS.length;
+
+  /* ── State ──────────────────────────────────────────────── */
+  let current  = 0;
+  let score    = 0;
+  let answered = false;
+
+  /* ── DOM refs ───────────────────────────────────────────── */
+  const qLabel      = document.getElementById('q-label');
+  const qText       = document.getElementById('q-text');
+  const optionsList = document.getElementById('options-list');
+  const feedback    = document.getElementById('feedback');
+  const btnNext     = document.getElementById('btn-next');
+  const progressFill= document.getElementById('progress-fill');
+  const progressLbl = document.getElementById('progress-label');
+  const progressPct = document.getElementById('progress-pct');
+  const progressBar = document.querySelector('.progress-bar');
+  const quizCont    = document.getElementById('quiz-container');
+  const resultsScr  = document.getElementById('results-screen');
+  const progressWrap= document.getElementById('progress-wrap');
+
+  /* ── Render question ────────────────────────────────────── */
+  function renderQuestion() {
+    answered = false;
+    const q = QUESTIONS[current];
+
+    qLabel.textContent = `Pregunta ${current + 1}`;
+    qText.textContent  = q.q;
+    feedback.className = 'feedback';
+    feedback.textContent = '';
+    btnNext.className  = 'btn-next';
+
+    optionsList.innerHTML = '';
+    q.opts.forEach((opt, i) => {
+      const li  = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.setAttribute('aria-label', `Opción ${KEYS[i].toUpperCase()}: ${opt}`);
+      btn.innerHTML = `<span class="option-key" aria-hidden="true">${KEYS[i]}</span><span>${opt}</span>`;
+      btn.addEventListener('click', () => selectOption(i));
+      li.appendChild(btn);
+      optionsList.appendChild(li);
+    });
+
+    // Animate card
+    const card = document.getElementById('question-card');
+    card.style.animation = 'none';
+    card.offsetHeight; // reflow
+    card.style.animation = '';
+
+    // Update progress
+    const pct = Math.round((current / TOTAL) * 100);
+    progressFill.style.width = pct + '%';
+    progressBar.setAttribute('aria-valuenow', current);
+    progressLbl.textContent = `Pregunta ${current + 1} de ${TOTAL}`;
+    progressPct.textContent = pct + '%';
+  }
+
+  /* ── Handle selection ───────────────────────────────────── */
+  function selectOption(chosen) {
+    if (answered) return;
+    answered = true;
+
+    const q = QUESTIONS[current];
+    const buttons = optionsList.querySelectorAll('.option-btn');
+
+    buttons.forEach(btn => btn.disabled = true);
+
+    if (chosen === q.ans) {
+      score++;
+      buttons[chosen].classList.add('correct');
+      feedback.className = 'feedback correct-fb show';
+      feedback.innerHTML = '<span class="feedback-icon">✓</span>¡Correcto!';
+    } else {
+      buttons[chosen].classList.add('wrong');
+      buttons[q.ans].classList.add('correct');
+      feedback.className = 'feedback wrong-fb show';
+      feedback.innerHTML = `<span class="feedback-icon">✗</span>Incorrecto. La respuesta correcta es la opción <strong>${KEYS[q.ans].toUpperCase()}</strong>.`;
+    }
+
+    btnNext.classList.add('visible');
+    if (current === TOTAL - 1) {
+      btnNext.innerHTML = 'Ver resultados <span aria-hidden="true">→</span>';
+    }
+    btnNext.focus();
+  }
+
+  /* ── Next question ──────────────────────────────────────── */
+  btnNext.addEventListener('click', () => {
+    current++;
+    if (current < TOTAL) {
+      renderQuestion();
+    } else {
+      showResults();
+    }
+  });
+
+  /* ── Results ────────────────────────────────────────────── */
+  function showResults() {
+    quizCont.style.display  = 'none';
+    progressWrap.style.display = 'none';
+    resultsScr.classList.add('show');
+
+    const pct  = Math.round((score / TOTAL) * 100);
+    const wrong = TOTAL - score;
+
+    // Grade
+    let grade, emoji, title, subtitle;
+    if (pct >= 90) {
+      grade = 'A'; emoji = '🧬'; title = '¡Excelente dominio!';
+      subtitle = 'Tienes un manejo sobresaliente de los conceptos de biología y genética.';
+    } else if (pct >= 70) {
+      grade = 'B'; emoji = '🔬'; title = '¡Buen trabajo!';
+      subtitle = 'Sólido conocimiento. Repasa los temas donde fallaste para llegar al nivel máximo.';
+    } else if (pct >= 50) {
+      grade = 'C'; emoji = '🧪'; title = 'Aprobado con esfuerzo';
+      subtitle = 'Tienes la base, pero hay conceptos clave que necesitan refuerzo. ¡Sigue estudiando!';
+    } else {
+      grade = 'D'; emoji = '📚'; title = 'Necesitas repasar';
+      subtitle = 'No te rindas — revisa el material y vuelve a intentarlo. ¡Puedes mejorar!';
+    }
+
+    document.getElementById('results-emoji').textContent   = emoji;
+    document.getElementById('results-title').textContent   = title;
+    document.getElementById('results-subtitle').textContent = subtitle;
+    document.getElementById('ring-number').textContent     = score;
+    document.getElementById('ring-total').textContent      = `/ ${TOTAL}`;
+    document.getElementById('stat-correct').textContent    = score;
+    document.getElementById('stat-wrong').textContent      = wrong;
+
+    const badge = document.getElementById('grade-badge');
+    badge.textContent = `Nivel ${grade} · ${pct}%`;
+    badge.className   = `grade-badge ${grade}`;
+
+    // Animate ring
+    const circumference = 2 * Math.PI * 60; // 377
+    const offset = circumference - (pct / 100) * circumference;
+    setTimeout(() => {
+      document.getElementById('ring-fill').style.strokeDashoffset = offset;
+    }, 200);
+  }
+
+  /* ── Restart ────────────────────────────────────────────── */
+  document.getElementById('btn-restart').addEventListener('click', () => {
+    current  = 0;
+    score    = 0;
+    answered = false;
+    document.getElementById('ring-fill').style.strokeDashoffset = 377;
+    resultsScr.classList.remove('show');
+    quizCont.style.display  = '';
+    progressWrap.style.display = '';
+    renderQuestion();
+  });
+
+  /* ── Init ───────────────────────────────────────────────── */
+  renderQuestion();
+</script>
+</body>
+</html>
